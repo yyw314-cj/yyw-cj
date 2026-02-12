@@ -59,4 +59,6 @@ jobs:
                   text += f"{i}. {n.get('title')}\n{n.get('url')}\n\n"
                   sent_news.add(n.get("id"))
               send(text)
+              test_msg = "📢 这是一条来自 Crypto News Bot 的测试消息！"
+send(test_msg)
           EOF
