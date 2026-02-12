@@ -1,0 +1,62 @@
+name: Crypto News Bot
+
+on:
+  schedule:
+    # 每3分钟检查一次新新闻
+    - cron: '*/3 * * * *'
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  send_news:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run news bot
+        env:
+          SAFEW_BOT_TOKEN: ${{ secrets.SAFEW_BOT_TOKEN }}
+          YOUR_CHAT_ID: ${{ secrets.YOUR_CHAT_ID }}
+        run: |
+          python << 'EOF'
+          import requests
+          import os
+          from datetime import datetime
+
+          SAFEW_BOT_TOKEN = os.environ.get('SAFEW_BOT_TOKEN')
+          YOUR_CHAT_ID = os.environ.get('YOUR_CHAT_ID')
+          sent_news = set()
+
+          def get_news():
+              try:
+                  res = requests.get("https://api.coingecko.com/api/v3/news", 
+                                    params={"query":"bitcoin cryptocurrency"}, timeout=10)
+                  return res.json().get("data", [])
+              except:
+                  return []
+
+          def send(msg):
+              try:
+                  url = f"https://api.safew.org/bot{SAFEW_BOT_TOKEN}/sendMessage"
+                  requests.post(url, json={"chat_id": YOUR_CHAT_ID, "text": msg}, timeout=10)
+              except:
+                  pass
+
+          all_news = get_news()
+          new_list = [n for n in all_news if n.get("id") not in sent_news][:5]
+          
+          if new_list:
+              text = f"📈 BTC&币圈最新新闻 {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
+              for i, n in enumerate(new_list, 1):
+                  text += f"{i}. {n.get('title')}\n{n.get('url')}\n\n"
+                  sent_news.add(n.get("id"))
+              send(text)
+          EOF
