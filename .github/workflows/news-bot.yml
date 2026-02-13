@@ -2,9 +2,8 @@ name: Crypto News Bot
 
 on:
   schedule:
-    # 每3分钟检查一次新新闻
     - cron: '*/3 * * * *'
-  workflow_dispatch: # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   send_news:
@@ -31,32 +30,57 @@ jobs:
           import os
           from datetime import datetime
 
-          SAFEW_BOT_TOKEN = os.environ.get('SAFEW_BOT_TOKEN')
-          YOUR_CHAT_ID = os.environ.get('YOUR_CHAT_ID')
+          SAFEW_BOT_TOKEN = os.environ.get("SAFEW_BOT_TOKEN")
+          YOUR_CHAT_ID = os.environ.get("YOUR_CHAT_ID")
+
+          # 开启测试：会真发一条测试消息
+          ENABLE_TEST_SEND = True
+
           sent_news = set()
 
           def get_news():
               try:
-                  res = requests.get("https://api.coingecko.com/api/v3/news", 
-                                    params={"query":"bitcoin cryptocurrency"}, timeout=10)
+                  res = requests.get(
+                      "https://api.coingecko.com/api/v3/news",
+                      params={"query":"bitcoin cryptocurrency"},
+                      timeout=10
+                  )
                   return res.json().get("data", [])
-              except:
+              except Exception:
                   return []
 
-          def send(msg):
+          def send_message(msg):
+              if not SAFEW_BOT_TOKEN or not YOUR_CHAT_ID:
+                  print("未配置 TOKEN 或 CHAT_ID")
+                  return False
               try:
                   url = f"https://api.safew.org/bot{SAFEW_BOT_TOKEN}/sendMessage"
-                  requests.post(url, json={"chat_id": YOUR_CHAT_ID, "text": msg}, timeout=10)
-              except:
-                  pass
+                  requests.post(url, json={
+                      "chat_id": YOUR_CHAT_ID,
+                      "text": msg
+                  }, timeout=10)
+                  print("发送成功")
+                  return True
+              except Exception as e:
+                  print("发送失败:", e)
+                  return False
 
-          all_news = get_news()
-          new_list = [n for n in all_news if n.get("id") not in sent_news][:5]
-          
-          if new_list:
-              text = f"📈 BTC&币圈最新新闻 {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
-              for i, n in enumerate(new_list, 1):
-                  text += f"{i}. {n.get('title')}\n{n.get('url')}\n\n"
-                  sent_news.add(n.get("id"))
-              send(text)
+          if __name__ == "__main__":
+              # 测试：真发一条
+              if ENABLE_TEST_SEND:
+                  test_text = "🤖 币圈新闻机器人测试成功！\n已正常运行～"
+                  send_message(test_text)
+
+              # 正常新闻推送
+              all_news = get_news()
+              new_news = [n for n in all_news if n.get("id") not in sent_news][:5]
+
+              if new_news:
+                  text = f"📈 BTC&币圈最新新闻 {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
+                  for i, n in enumerate(new_news, 1):
+                      title = n.get("title", "无标题")
+                      url = n.get("url", "")
+                      text += f"{i}. {title}\n{url}\n\n"
+                      sent_news.add(n.get("id"))
+                  send_message(text)
           EOF
