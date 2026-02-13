@@ -33,8 +33,8 @@ jobs:
           SAFEW_BOT_TOKEN = os.environ.get("SAFEW_BOT_TOKEN")
           YOUR_CHAT_ID = os.environ.get("YOUR_CHAT_ID")
 
-          # 开启测试：会真发一条测试消息
-          ENABLE_TEST_SEND = True
+          # 关闭测试模式，只推送真实新闻
+          ENABLE_TEST_SEND = False
 
           sent_news = set()
 
